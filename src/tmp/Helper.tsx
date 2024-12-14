@@ -39,6 +39,8 @@ export function useHelper<H extends HelperConstructor>(
 
     if (currentHelper) {
       // Prevent the helpers from blocking rays
+
+      currentHelper.raycast = () => null
       currentHelper.traverse((child) => (child.raycast = () => null))
       scene.add(currentHelper)
       return () => {

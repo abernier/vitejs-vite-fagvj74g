@@ -49,7 +49,7 @@ class RaycasterHelper extends Object3D {
     this.origin.raycast = () => null
 
     const size = 0.1
-    let geometry = new BufferGeometry()
+    const geometry = new BufferGeometry()
     // prettier-ignore
     geometry.setAttribute( 'position', new Float32BufferAttribute( [
               - size, size, 0,
