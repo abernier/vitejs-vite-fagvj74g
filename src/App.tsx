@@ -12,6 +12,7 @@ import {
   Center,
   Resize,
   Environment,
+  Sphere,
 } from '@react-three/drei'
 import { suspend } from 'suspend-react'
 
@@ -65,10 +66,11 @@ function Tangent({
 
 function Scene() {
   const gui = useControls({
-    model: { value: 'pasteque', options: ['suzi', 'pasteque'] },
     camera: { value: 'cc', options: ['user', 'cc'] },
+    model: { value: 'pasteque', options: ['suzi', 'pasteque', 'ball'] },
     origin: { value: [-4, 0.1, 0] },
     direction: { value: [1, 0, 0] },
+    distance: { value: 1, min: 0, max: 10 },
   })
   const debug = gui.camera === 'cc'
 
@@ -76,7 +78,7 @@ function Scene() {
 
   const raycasterRef = useRef<ElementRef<typeof Raycaster>>(null)
   const [hit, setHit] = useState<THREE.Intersection | null>(null)
-  const d = 1
+  const d = gui.distance
 
   const sphereRef = useRef<THREE.Mesh>(null)
   const target2Ref = useRef<THREE.Group>(null)
@@ -112,6 +114,11 @@ function Scene() {
         <Resize width scale={2} key={gui.model}>
           {gui.model === 'pasteque' && <Pasteque rotation-z={(7 * Math.PI) / 180} rotation-x={(-1 * Math.PI) / 180} />}
           {gui.model === 'suzi' && <Suzi rotation={[-0.63, 0, 0]} />}
+          {gui.model === 'ball' && (
+            <Sphere>
+              <meshStandardMaterial color="#eee" />
+            </Sphere>
+          )}
         </Resize>
       </Center>
 
