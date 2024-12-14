@@ -1,20 +1,12 @@
-import * as THREE from 'three';
+import * as THREE from 'three'
 
-import { ComponentProps, useRef, useState } from 'react';
-import { Canvas } from '@react-three/fiber';
-import { useControls } from 'leva';
-import {
-  FaceLandmarker,
-  PerspectiveCamera,
-  Helper,
-  CameraControls,
-  useGLTF,
-  Center,
-  Resize,
-} from '@react-three/drei';
+import { ComponentProps, ElementRef, useEffect, useRef, useState } from 'react'
+import { Canvas, useFrame, useThree } from '@react-three/fiber'
+import { useControls } from 'leva'
+import { FaceLandmarker, PerspectiveCamera, Helper, CameraControls, useGLTF, Center, Resize } from '@react-three/drei'
 
-import { FaceControls } from './tmp/FaceControls';
-import { Raycaster } from './tmp/Raycaster';
+import { FaceControls } from './tmp/FaceControls'
+import { Raycaster } from './tmp/Raycaster'
 
 export default function App() {
   return (
@@ -25,63 +17,116 @@ export default function App() {
         </FaceLandmarker>
       </Canvas>
     </>
-  );
+  )
+}
+
+function Tangent({
+  hit,
+  ...props
+}: {
+  hit: THREE.Intersection | null
+} & ComponentProps<'group'>) {
+  const camera = useThree((state) => state.camera)
+
+  const groupRef = useRef<THREE.Group>(null)
+
+  //
+  // https://chatgpt.com/share/675d6e25-1e0c-8011-b0a9-986bec7de762
+  //
+
+  useEffect(() => {
+    if (!groupRef.current || !hit) return
+    groupRef.current.position.copy(hit.point)
+
+    // Oriente le groupe selon la normale du hit
+    const normalMatrix = new THREE.Matrix4().lookAt(
+      hit.point,
+      hit.point.clone().add(hit.face?.normal || new THREE.Vector3(0, 0, 0)),
+      camera.up
+    )
+    groupRef.current.quaternion.setFromRotationMatrix(normalMatrix)
+  }, [camera.up, hit])
+
+  return <group ref={groupRef} {...props} />
 }
 
 function Scene() {
   const gui = useControls({
     camera: { value: 'cc', options: ['user', 'cc'] },
-  });
-  const debug = gui.camera === 'cc';
+  })
+  const debug = gui.camera === 'cc'
 
-  const [userCam, setUserCam] = useState<THREE.PerspectiveCamera | null>(null);
+  const [userCam, setUserCam] = useState<THREE.PerspectiveCamera | null>(null)
 
-  const raycasterRef = useRef<THREE.Raycaster>(null);
+  const raycasterRef = useRef<ElementRef<typeof Raycaster>>(null)
+  const [hit, setHit] = useState<THREE.Intersection | null>(null)
+  const d = 1
+
+  const sphereRef = useRef<THREE.Mesh>(null)
+  const target2Ref = useRef<THREE.Group>(null)
+  const wrapperRef = useRef<THREE.Group>(null)
+
+  const [pos] = useState(new THREE.Vector3())
+  const [quat] = useState(new THREE.Quaternion())
+  useFrame(() => {
+    if (!raycasterRef.current) return
+
+    const { hitsRef } = raycasterRef.current
+
+    if (!sphereRef.current || !hitsRef.current) return
+    const hit = hitsRef.current[0]
+    setHit(hit)
+    sphereRef.current.position.copy(hit.point)
+
+    target2Ref.current?.getWorldPosition(pos)
+    console.log(pos)
+    target2Ref.current?.getWorldQuaternion(quat)
+
+    wrapperRef.current?.position.copy(pos)
+    wrapperRef.current?.quaternion.copy(quat)
+  })
 
   return (
     <>
       <color attach="background" args={['#403c3f']} />
-      {/* {debug && <axesHelper />} */}
-      {/* {debug && <gridHelper />} */}
+      {debug && <axesHelper raycast={() => null} />}
+      {debug && <gridHelper raycast={() => null} />}
 
       <Center top>
         <Resize width scale={2}>
-          <Model
-            rotation-z={(7 * Math.PI) / 180}
-            rotation-x={(-1 * Math.PI) / 180}
-          />
+          <Model rotation-z={(7 * Math.PI) / 180} rotation-x={(-1 * Math.PI) / 180} />
         </Resize>
       </Center>
 
-      <Raycaster
-        ref={raycasterRef}
-        origin={[-4, 0, 0]}
-        direction={[1, 0, 0]}
-        near={1}
-        far={8}
-        helper={[20]}
-      />
+      <Raycaster ref={raycasterRef} origin={[-4, 0.1, 0]} direction={[1, 0, 0]} near={1} far={8} helper={[0]} />
+      <mesh ref={sphereRef} raycast={() => null}>
+        <sphereGeometry args={[0.04]} />
+        <meshBasicMaterial color="red" />
+      </mesh>
 
-      <PerspectiveCamera
-        ref={(cam) => setUserCam(cam)}
-        makeDefault={gui.camera === 'user'}
-        fov={40}
-        near={0.1}
-        far={5}
-      >
+      <Tangent hit={hit}>
+        <group scale-z={-1} position-z={-d}>
+          <axesHelper raycast={() => null} />
+          <group ref={target2Ref} />
+        </group>
+      </Tangent>
+
+      <PerspectiveCamera ref={(cam) => setUserCam(cam)} makeDefault={gui.camera === 'user'} fov={40} near={0.1} far={5}>
         {debug && <Helper type={THREE.CameraHelper} />}
       </PerspectiveCamera>
 
-      <FaceControls
-        camera={userCam ?? undefined}
-        makeDefault
-        facemesh={{ position: [0, 0, 1.5] }}
-        // smoothTime={0.2}
-        // debug={debug}
-      />
+      <group ref={wrapperRef}>
+        <FaceControls
+          camera={userCam ?? undefined}
+          makeDefault
+          offset={false}
+          // smoothTime={0.2}
+          // debug={debug}
+        />
+      </group>
       <CameraControls />
     </>
-  );
+  )
 }
 
 function Model(props: ComponentProps<'group'>) {
@@ -95,7 +140,7 @@ function Model(props: ComponentProps<'group'>) {
 
   const { nodes, materials } = useGLTF(
     'https://storage.googleapis.com/abernier-portfolio/painterly_brushwork_study_with_pchans_painting.glb'
-  ) as any;
+  ) as any
 
   return (
     <group {...props} dispose={null}>
@@ -139,5 +184,5 @@ function Model(props: ComponentProps<'group'>) {
         </group>
       </group>
     </group>
-  );
+  )
 }

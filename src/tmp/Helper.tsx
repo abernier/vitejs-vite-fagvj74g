@@ -47,7 +47,7 @@ export function useHelper<H extends HelperConstructor>(
         currentHelper.dispose?.()
       }
     }
-  }, [scene, helperConstructor, nodeRef, args])
+  }, [scene, helperConstructor, nodeRef, ...args])
 
   useFrame(() => void helperRef.current?.update?.())
   return helperRef
