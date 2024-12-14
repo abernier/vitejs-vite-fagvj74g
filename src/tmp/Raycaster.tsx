@@ -33,23 +33,38 @@ function toThreeVec3(v: Vector3) {
  * `<raycaster>` wrapper, with a `helper` prop to visualize it
  */
 export const Raycaster = forwardRef<RaycasterApi, RaycasterProps>(
-  ({ origin: _origin, direction: _direction, near, far, helper = false, ...props }, fref) => {
-    const origin = toThreeVec3(_origin)
-    const direction = toThreeVec3(_direction)
+  (
+    {
+      origin: _origin = new THREE.Vector3(-4, 1.1, 0.1),
+      direction: _direction = new THREE.Vector3(1, 0, 0),
+      near,
+      far,
+      helper = false,
+      ...props
+    },
+    fref
+  ) => {
+    // const origin = toThreeVec3(_origin)
+    // const direction = toThreeVec3(_direction)
+    // console.log('Raycaster')
 
-    const [raycaster] = useState(() => new THREE.Raycaster(origin, direction))
+    const [raycaster] = useState(
+      () => new THREE.Raycaster(new THREE.Vector3(-4, 1.1, 0.1), new THREE.Vector3(1, 0, 0), 0.25, 8)
+    )
+    window.raycaster = raycaster
     const hitsRef = useRef<THREE.Intersection[]>([])
 
     const raycasterRef = useRef<THREE.Raycaster>(null)
-    const args = helper || []
-    const raycasterHelperRef = useHelper(helper && raycasterRef, RaycasterHelper, ...args)
+    const args = helper || [20]
+    const raycasterHelperRef = useHelper(raycasterRef, RaycasterHelper, ...args)
 
     // Update the hits with intersection results
     useFrame(({ scene }) => {
-      if (!helper) return
+      // if (!helper) return
 
       if (!raycasterHelperRef.current || !raycasterRef.current) return
       const hits = raycasterRef.current.intersectObjects(scene.children)
+      // console.log('hits', hits)
       hitsRef.current = hits
       raycasterHelperRef.current.hits = hits
     })
@@ -57,6 +72,13 @@ export const Raycaster = forwardRef<RaycasterApi, RaycasterProps>(
     const api = useMemo<RaycasterApi>(() => ({ raycaster, hitsRef }), [raycaster])
     useImperativeHandle(fref, () => api, [api])
 
-    return <primitive ref={raycasterRef} object={raycaster} {...{ origin, direction, near, far }} {...props} />
+    return (
+      <primitive
+        ref={raycasterRef}
+        object={raycaster}
+        // {...{ origin, direction, near, far }}
+        // {...props}
+      />
+    )
   }
 )

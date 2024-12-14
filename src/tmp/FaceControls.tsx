@@ -77,6 +77,7 @@ export type FaceControlsApi = THREE.EventDispatcher & {
   update: (delta: number, target?: THREE.Object3D) => void
   /** <Facemesh> ref api */
   facemeshApiRef: RefObject<FacemeshApi>
+  target: THREE.Object3D
 }
 
 const FaceControlsContext = /* @__PURE__ */ createContext({} as FaceControlsApi)
@@ -241,8 +242,9 @@ export const FaceControls = /* @__PURE__ */ forwardRef<FaceControlsApi, FaceCont
           computeTarget,
           update,
           facemeshApiRef,
+          target,
         }),
-      [computeTarget, update]
+      [computeTarget, target, update]
     )
     useImperativeHandle(fref, () => api, [api])
 
