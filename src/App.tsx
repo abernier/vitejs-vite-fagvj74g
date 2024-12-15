@@ -2,7 +2,7 @@ import * as THREE from 'three'
 
 import { ComponentProps, ElementRef, Suspense, useEffect, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
-import { useControls } from 'leva'
+import { folder, useControls } from 'leva'
 import {
   FaceLandmarker,
   PerspectiveCamera,
@@ -44,6 +44,15 @@ function Scene() {
     // origin: { value: [-4, 1.1, 0.1] },
     // direction: { value: [1, 0, 0] },
     distance: { value: 1.5, min: 0, max: 10 },
+
+    faceControls: folder({
+      smoothTime: { value: 2, min: 0, max: 10 },
+      offset: false,
+      offsetScalar: { value: 2, min: 0, max: 100 },
+    }),
+
+    background: false,
+    blur: { value: 0, min: 0, max: 1 },
   })
   const debug = gui.camera === 'cc'
 
@@ -89,7 +98,7 @@ function Scene() {
     satelliteWorldRot.setFromQuaternion(satelliteWorldQuat, 'XYZ')
 
     const eps = 1e-9
-    const smoothtime = 5
+    const smoothtime = 4
     easing.damp3(current.position, satelliteWorldPos, smoothtime, delta, undefined, undefined, eps)
     easing.dampE(current.rotation, satelliteWorldRot, smoothtime, delta, undefined, undefined, eps)
     wrapperRef.current?.position.copy(current.position)
@@ -113,28 +122,56 @@ function Scene() {
       {debug && <axesHelper raycast={() => null} />}
       {debug && <gridHelper raycast={() => null} />}
 
-      <Center top key={gui.model} position-z={-2}>
+      <group position-z={-2}>
         <Resize width scale={2} key={gui.model}>
           {gui.model === 'pasteque' && <Pasteque rotation-z={(7 * Math.PI) / 180} rotation-x={(-1 * Math.PI) / 180} />}
-          {gui.model === 'suzi' && <Suzi rotation={[-0.63, 0, 0]} />}
+          {gui.model === 'suzi' && (
+            <>
+              <Center top key={gui.model}>
+                <Suzi rotation={[-0.63, 0, 0]} scale={2} />
+              </Center>
+              <Center top position={[-2, 0, 2]}>
+                <mesh castShadow>
+                  <sphereGeometry args={[0.5, 64, 64]} />
+                  <meshStandardMaterial color="#9d4b4b" />
+                </mesh>
+              </Center>
+              <Center top position={[2.5, 0, 1]}>
+                <mesh castShadow rotation={[0, Math.PI / 4, 0]}>
+                  <boxGeometry args={[0.7, 0.7, 0.7]} />
+                  <meshStandardMaterial color="#9d4b4b" />
+                </mesh>
+              </Center>
+
+              <Environment files={suspend(city).default} />
+            </>
+          )}
           {gui.model === 'ball' && (
-            <Sphere args={[1]}>
-              <meshStandardMaterial color="#eee" flatShading />
-              <Helper type={VertexNormalsHelper} args={[0.04]} />
-            </Sphere>
+            <>
+              <Sphere args={[1]}>
+                {/* <meshStandardMaterial color="#eee" flatShading /> */}
+                <meshPhysicalMaterial clearcoat={1} roughness={0} color="black" />
+                <Helper type={VertexNormalsHelper} args={[0.04]} />
+              </Sphere>
+              <Environment
+                files="https://storage.googleapis.com/abernier-portfolio/lebombo_2k.hdr"
+                background={gui.background}
+                blur={gui.blur}
+              />
+            </>
           )}
         </Resize>
-      </Center>
+      </group>
 
-      <Raycaster
-        ref={raycasterRef}
-        // near={1} far={8}
-      />
-
+      <Raycaster ref={raycasterRef} origin={[-4, 1.1, 0.1]} direction={[1, 0, 0]} near={0} far={8} helper={[1]} />
       <Tangent hit={hit}>
         <axesHelper raycast={() => null} scale={0.1} />
+        <Sphere args={[0.01]} raycast={() => null}>
+          <meshBasicMaterial color="green" />
+        </Sphere>
         <group scale-z={-1} position-z={-gui.distance}>
-          <axesHelper raycast={() => null} />
+          <axesHelper raycast={() => null} scale={0.2} />
+
           <group ref={satelliteRef} />
         </group>
       </Tangent>
@@ -144,7 +181,7 @@ function Scene() {
         makeDefault={gui.camera === 'user'}
         fov={35}
         near={0.1}
-        far={50}
+        far={10}
       >
         {debug && <Helper type={THREE.CameraHelper} />}
       </PerspectiveCamera>
@@ -156,9 +193,10 @@ function Scene() {
               ref={faceControlsRef}
               camera={userCam ?? undefined}
               makeDefault
-              // offset={false}
-              // offsetScalar={40}
-              // smoothTime={2}
+              offset={gui.offset}
+              offsetScalar={gui.offsetScalar}
+              // eyes
+              smoothTime={gui.smoothTime}
               debug={debug}
               // facemesh={{ position: [0, 1, 4] }}
             />
@@ -166,8 +204,6 @@ function Scene() {
         </Suspense>
       </group>
       <CameraControls />
-
-      <Environment files={suspend(city).default} />
     </>
   )
 }

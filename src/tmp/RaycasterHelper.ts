@@ -17,6 +17,8 @@ import {
 const _o = new Object3D()
 const _v = new Vector3()
 
+const radius = 0.01
+
 class RaycasterHelper extends Object3D {
   raycaster: Raycaster
   hits: Intersection[]
@@ -44,7 +46,7 @@ class RaycasterHelper extends Object3D {
 
     this.hits = []
 
-    this.origin = new Mesh(new SphereGeometry(0.04, 32), new MeshBasicMaterial())
+    this.origin = new Mesh(new SphereGeometry(radius, 32), new MeshBasicMaterial())
     this.origin.name = 'RaycasterHelper_origin'
     this.origin.raycast = () => null
 
@@ -77,7 +79,11 @@ class RaycasterHelper extends Object3D {
     this.originToNear.name = 'RaycasterHelper_originToNear'
     this.originToNear.raycast = () => null
 
-    this.hitPoints = new InstancedMesh(new SphereGeometry(0.04), new MeshBasicMaterial(), this.numberOfHitsToVisualize)
+    this.hitPoints = new InstancedMesh(
+      new SphereGeometry(radius),
+      new MeshBasicMaterial(),
+      this.numberOfHitsToVisualize
+    )
     this.hitPoints.name = 'RaycasterHelper_hits'
     this.hitPoints.raycast = () => null
 

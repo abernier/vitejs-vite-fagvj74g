@@ -10,12 +10,13 @@ import { Falsey } from 'utility-types'
 
 type HelperArgs<T> = T extends [any, ...infer R] ? R : never
 
-type RaycasterProps = Omit<ComponentProps<'raycaster'>, 'args'> & {
+type RaycasterProps = THREE.Raycaster & {
   /** Origin of the raycaster  */
   origin: Vector3
   /** Direction of the raycaster  */
   direction: Vector3
 } & {
+  raycaster?: THREE.Raycaster
   /** Whether or not to display the RaycasterHelper - you can pass additional params for the ctor here */
   helper?: Falsey | HelperArgs<ConstructorParameters<typeof RaycasterHelper>>
 }
@@ -25,60 +26,35 @@ type RaycasterApi = {
   hitsRef: RefObject<THREE.Intersection[]>
 }
 
-function toThreeVec3(v: Vector3) {
-  return v instanceof THREE.Vector3 ? v : new THREE.Vector3(...(typeof v === 'number' ? [v, v, v] : v))
-}
-
 /**
  * `<raycaster>` wrapper, with a `helper` prop to visualize it
  */
 export const Raycaster = forwardRef<RaycasterApi, RaycasterProps>(
-  (
-    {
-      origin: _origin = new THREE.Vector3(-4, 1.1, 0.1),
-      direction: _direction = new THREE.Vector3(1, 0, 0),
-      near,
-      far,
-      helper = false,
-      ...props
-    },
-    fref
-  ) => {
-    // const origin = toThreeVec3(_origin)
-    // const direction = toThreeVec3(_direction)
-    // console.log('Raycaster')
+  ({ raycaster: _raycaster, origin, direction, near, far, helper = false, ...props }, fref) => {
+    const [r] = useState(() => new THREE.Raycaster())
+    const raycaster = _raycaster || r
 
-    const [raycaster] = useState(
-      () => new THREE.Raycaster(new THREE.Vector3(-4, 1.1, 0.1), new THREE.Vector3(1, 0, 0), 0.25, 8)
-    )
     window.raycaster = raycaster
     const hitsRef = useRef<THREE.Intersection[]>([])
 
     const raycasterRef = useRef<THREE.Raycaster>(null)
     const args = helper || [20]
-    const raycasterHelperRef = useHelper(raycasterRef, RaycasterHelper, ...args)
+    const raycasterHelperRef = useHelper(helper && raycasterRef, RaycasterHelper, ...args)
 
     // Update the hits with intersection results
     useFrame(({ scene }) => {
-      // if (!helper) return
+      if (!raycasterRef.current) return
 
-      if (!raycasterHelperRef.current || !raycasterRef.current) return
       const hits = raycasterRef.current.intersectObjects(scene.children)
-      // console.log('hits', hits)
       hitsRef.current = hits
-      raycasterHelperRef.current.hits = hits
+      // console.log('hits', hits)
+
+      if (helper && raycasterHelperRef.current) raycasterHelperRef.current.hits = hits
     })
 
     const api = useMemo<RaycasterApi>(() => ({ raycaster, hitsRef }), [raycaster])
     useImperativeHandle(fref, () => api, [api])
 
-    return (
-      <primitive
-        ref={raycasterRef}
-        object={raycaster}
-        // {...{ origin, direction, near, far }}
-        // {...props}
-      />
-    )
+    return <primitive ref={raycasterRef} object={raycaster} {...{ origin, direction, near, far }} {...props} />
   }
 )
