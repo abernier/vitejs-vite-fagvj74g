@@ -287,13 +287,14 @@ export const Facemesh = /* @__PURE__ */ React.forwardRef<FacemeshApi, FacemeshPr
             <group ref={scaleRef}>
               {debug ? (
                 <>
-                  <axesHelper args={[one]} />
+                  <axesHelper args={[one]} raycast={() => null} />
                   <Line
                     points={[
                       [0, 0, 0],
                       [0, 0, -one],
                     ]}
                     color={0x00ffff}
+                    raycast={() => null}
                   />
                 </>
               ) : null}
@@ -305,10 +306,10 @@ export const Facemesh = /* @__PURE__ */ React.forwardRef<FacemeshApi, FacemeshPr
                     <FacemeshEye side="right" ref={eyeLeftRef} debug={debug} />
                   </group>
                 )}
-                <mesh ref={meshRef} name="face">
+                <mesh ref={meshRef} name="face" raycast={() => null}>
                   {children}
 
-                  {debug ? <>{bbox && <box3Helper args={[bbox]} />}</> : null}
+                  {debug ? <>{bbox && <box3Helper args={[bbox]} raycast={() => null} />}</> : null}
                 </mesh>
               </group>
             </group>
@@ -448,7 +449,7 @@ export const FacemeshEye = /* @__PURE__ */ React.forwardRef<FacemeshEyeApi, Face
     return (
       <group>
         <group ref={eyeMeshRef}>
-          {debug && <axesHelper />}
+          {debug && <axesHelper raycast={() => null} />}
 
           <group ref={irisDirRef}>
             <>
@@ -460,6 +461,7 @@ export const FacemeshEye = /* @__PURE__ */ React.forwardRef<FacemeshEyeApi, Face
                   ]}
                   lineWidth={1}
                   color={color}
+                  raycast={() => null}
                 />
               )}
             </>

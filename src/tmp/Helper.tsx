@@ -30,15 +30,19 @@ export function useHelper<H extends HelperConstructor>(
   const helperRef = React.useRef<InstanceType<H>>(null!)
   const scene = useThree((state) => state.scene)
 
+  const stableArgs = React.useMemo(() => args, [args])
+
   React.useLayoutEffect(() => {
     let currentHelper: InstanceType<H> = undefined!
 
     if (nodeRef && nodeRef?.current && helperConstructor) {
-      helperRef.current = currentHelper = new helperConstructor(nodeRef.current, ...args) as InstanceType<H>
+      helperRef.current = currentHelper = new helperConstructor(nodeRef.current, ...stableArgs) as InstanceType<H>
     }
 
     if (currentHelper) {
       // Prevent the helpers from blocking rays
+
+      currentHelper.raycast = () => null
       currentHelper.traverse((child) => (child.raycast = () => null))
       scene.add(currentHelper)
       return () => {
@@ -47,7 +51,7 @@ export function useHelper<H extends HelperConstructor>(
         currentHelper.dispose?.()
       }
     }
-  }, [scene, helperConstructor, nodeRef, args])
+  }, [scene, helperConstructor, nodeRef, stableArgs])
 
   useFrame(() => void helperRef.current?.update?.())
   return helperRef
