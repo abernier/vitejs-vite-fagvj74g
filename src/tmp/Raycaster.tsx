@@ -35,13 +35,9 @@ type RaycasterApi = {
  */
 export const Raycaster = forwardRef<RaycasterApi, RaycasterProps>(
   ({ raycaster: _raycaster, origin, direction, helper = false, ...props }, fref) => {
-    const [r] = useState(() => new THREE.Raycaster())
+    const [r] = useState(() => new THREE.Raycaster(toThreeVec3(origin), toThreeVec3(direction)))
     const raycaster = _raycaster || r
     window.raycaster = raycaster
-
-    useLayoutEffect(() => {
-      raycaster.set(toThreeVec3(origin), toThreeVec3(direction))
-    }, [origin, direction, raycaster])
 
     const hitsRef = useRef<THREE.Intersection[]>([])
 

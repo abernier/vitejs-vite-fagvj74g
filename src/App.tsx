@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 
-import { ComponentProps, ElementRef, Suspense, useEffect, useRef, useState } from 'react'
+import { ComponentProps, ElementRef, forwardRef, Suspense, useEffect, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import { folder, useControls } from 'leva'
 import {
@@ -55,7 +55,7 @@ function Scene() {
     background: false,
     blur: { value: 0, min: 0, max: 1 },
   })
-  const debug = gui.camera === 'cc'
+  const cc = gui.camera === 'cc'
 
   const raycaster = useThree((state) => state.raycaster)
 
@@ -120,8 +120,8 @@ function Scene() {
   return (
     <>
       <color attach="background" args={['#403c3f']} />
-      {debug && <axesHelper raycast={() => null} />}
-      {debug && <gridHelper raycast={() => null} />}
+      {cc && <axesHelper raycast={() => null} />}
+      {cc && <gridHelper raycast={() => null} />}
 
       <group position-z={-2}>
         <Resize width scale={2} key={gui.model}>
@@ -149,7 +149,7 @@ function Scene() {
           )}
           {gui.model === 'ball' && (
             <>
-              <Sphere args={[1]}>
+              <Sphere args={[1, 32, 32]}>
                 {/* <meshStandardMaterial color="#eee" flatShading /> */}
                 <meshPhysicalMaterial clearcoat={1} roughness={0} color="black" />
                 <Helper type={VertexNormalsHelper} args={[0.04]} />
@@ -171,30 +171,12 @@ function Scene() {
         direction={[1, 0, 0]}
         near={0}
         far={8}
-        helper={debug && [1]}
+        helper={cc && [1]}
       />
 
-      <Tangent hit={hit}>
-        <axesHelper raycast={() => null} scale={0.1} />
-        <Sphere args={[0.01]} raycast={() => null}>
-          <meshBasicMaterial color="green" />
-        </Sphere>
-        <group scale-z={-1} position-z={-gui.distance}>
-          <axesHelper raycast={() => null} scale={0.2} />
-
-          <group ref={satelliteRef} />
-        </group>
-      </Tangent>
-
-      <PerspectiveCamera
-        ref={(cam) => setUserCam(cam)}
-        makeDefault={gui.camera === 'user'}
-        fov={35}
-        near={0.001}
-        far={10}
-      >
-        {debug && <Helper type={THREE.CameraHelper} />}
-      </PerspectiveCamera>
+      <NormalGroup ref={satelliteRef} hit={hit} altitude={gui.distance}>
+        <axesHelper raycast={() => null} scale={0.2} />
+      </NormalGroup>
 
       <group ref={wrapperRef}>
         <Suspense fallback={null}>
@@ -206,16 +188,46 @@ function Scene() {
               offset={gui.offset}
               offsetScalar={gui.offsetScalar}
               eyes={gui.eyes}
-              debug={debug}
+              debug={cc}
               // facemesh={{ position: [0, 1, 4] }}
             />
           </FaceLandmarker>
         </Suspense>
       </group>
+
+      <PerspectiveCamera
+        ref={(cam) => setUserCam(cam)}
+        makeDefault={gui.camera === 'user'}
+        fov={35}
+        near={0.001}
+        far={10}
+      >
+        {cc && <Helper type={THREE.CameraHelper} />}
+      </PerspectiveCamera>
       <CameraControls />
     </>
   )
 }
+
+const NormalGroup = forwardRef<
+  THREE.Group,
+  { hit: THREE.Intersection | null; altitude?: number } & ComponentProps<'group'>
+>(({ hit, altitude = 0, ...props }, fref) => {
+  const satelliteRef = useRef<THREE.Group>(null)
+  const ref = fref || satelliteRef
+
+  return (
+    <Tangent hit={hit}>
+      <axesHelper raycast={() => null} scale={0.1} />
+      <Sphere args={[0.01]} raycast={() => null}>
+        <meshBasicMaterial color="green" />
+      </Sphere>
+      <group scale-z={-1} position-z={-altitude}>
+        <group ref={ref} {...props} />
+      </group>
+    </Tangent>
+  )
+})
 
 //
 // Tangent
