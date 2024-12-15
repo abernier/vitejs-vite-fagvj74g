@@ -44,17 +44,20 @@ function Scene() {
     // origin: { value: [-4, 1.1, 0.1] },
     // direction: { value: [1, 0, 0] },
     distance: { value: 1.5, min: 0, max: 10 },
+    smoothTime: { value: 1, min: 0, max: 10 },
 
     faceControls: folder({
-      smoothTime: { value: 2, min: 0, max: 10 },
       offset: false,
-      offsetScalar: { value: 2, min: 0, max: 100 },
+      offsetScalar: { value: 50, min: 0, max: 100 },
+      eyes: false,
     }),
 
     background: false,
     blur: { value: 0, min: 0, max: 1 },
   })
   const debug = gui.camera === 'cc'
+
+  const raycaster = useThree((state) => state.raycaster)
 
   const [userCam, setUserCam] = useState<THREE.PerspectiveCamera | null>(null)
 
@@ -65,31 +68,29 @@ function Scene() {
   const satelliteRef = useRef<THREE.Group>(null)
   const wrapperRef = useRef<THREE.Group>(null)
 
-  const [satelliteWorldPos] = useState(new THREE.Vector3())
-  const [satelliteWorldQuat] = useState(new THREE.Quaternion())
   const [pos] = useState(new THREE.Vector3())
   const [dir] = useState(new THREE.Vector3())
-
+  const [satelliteWorldPos] = useState(new THREE.Vector3())
+  const [satelliteWorldQuat] = useState(new THREE.Quaternion())
   const [current] = useState(() => new THREE.Object3D())
   useFrame((_, delta) => {
     if (!raycasterRef.current) return
-    if (!faceControlsRef.current) return
 
     //
     // Update raycaster (along faceControls' target)
     //
-
-    const target = faceControlsRef.current.target
-    target.getWorldPosition(pos)
-    raycasterRef.current.raycaster.ray.origin.copy(pos)
-
-    // console.log(target)
-    target.getWorldDirection(dir)
-    // console.log('dir', dir)
-    raycasterRef.current.raycaster.ray.direction.copy(dir.negate().normalize())
+    // TODO: temporarily disabled - re-enable later
+    //
+    if (faceControlsRef.current) {
+      // const { target } = faceControlsRef.current
+      // target.getWorldPosition(pos)
+      // target.getWorldDirection(dir)
+      // raycasterRef.current.raycaster.ray.origin.copy(pos)
+      // raycasterRef.current.raycaster.ray.direction.copy(dir.negate().normalize())
+    }
 
     //
-    // damp `wrapperRef` (to tangent point)
+    // damp `wrapperRef` to `satelliteRef`
     //
 
     satelliteRef.current?.getWorldPosition(satelliteWorldPos)
@@ -98,7 +99,7 @@ function Scene() {
     satelliteWorldRot.setFromQuaternion(satelliteWorldQuat, 'XYZ')
 
     const eps = 1e-9
-    const smoothtime = 4
+    const smoothtime = gui.smoothTime
     easing.damp3(current.position, satelliteWorldPos, smoothtime, delta, undefined, undefined, eps)
     easing.dampE(current.rotation, satelliteWorldRot, smoothtime, delta, undefined, undefined, eps)
     wrapperRef.current?.position.copy(current.position)
@@ -163,7 +164,16 @@ function Scene() {
         </Resize>
       </group>
 
-      <Raycaster ref={raycasterRef} origin={[-4, 1.1, 0.1]} direction={[1, 0, 0]} near={0} far={8} helper={[1]} />
+      <Raycaster
+        ref={raycasterRef}
+        raycaster={raycaster} // pass r3f's raycaster
+        origin={[-4, 1.1, 0.1]}
+        direction={[1, 0, 0]}
+        near={0}
+        far={8}
+        helper={debug && [1]}
+      />
+
       <Tangent hit={hit}>
         <axesHelper raycast={() => null} scale={0.1} />
         <Sphere args={[0.01]} raycast={() => null}>
@@ -180,7 +190,7 @@ function Scene() {
         ref={(cam) => setUserCam(cam)}
         makeDefault={gui.camera === 'user'}
         fov={35}
-        near={0.1}
+        near={0.001}
         far={10}
       >
         {debug && <Helper type={THREE.CameraHelper} />}
@@ -195,8 +205,7 @@ function Scene() {
               makeDefault
               offset={gui.offset}
               offsetScalar={gui.offsetScalar}
-              // eyes
-              smoothTime={gui.smoothTime}
+              eyes={gui.eyes}
               debug={debug}
               // facemesh={{ position: [0, 1, 4] }}
             />
