@@ -41,10 +41,9 @@ function Scene() {
   const gui = useControls({
     camera: { value: 'cc', options: ['user', 'cc'] },
     model: { value: 'ball', options: ['suzi', 'pasteque', 'ball'] },
-    // origin: { value: [-4, 1.1, 0.1] },
-    // direction: { value: [1, 0, 0] },
+    raycaster: { value: 'pointer', options: ['pointer', 'own'] },
     distance: { value: 1.5, min: 0, max: 10 },
-    smoothTime: { value: 1, min: 0, max: 10 },
+    smoothTime: { value: 2, min: 0, max: 10 },
 
     faceControls: folder({
       offset: false,
@@ -77,16 +76,14 @@ function Scene() {
     if (!raycasterRef.current) return
 
     //
-    // Update raycaster (along faceControls' target)
+    // Update "own" raycaster (along faceControls' target)
     //
-    // TODO: temporarily disabled - re-enable later
-    //
-    if (faceControlsRef.current) {
-      // const { target } = faceControlsRef.current
-      // target.getWorldPosition(pos)
-      // target.getWorldDirection(dir)
-      // raycasterRef.current.raycaster.ray.origin.copy(pos)
-      // raycasterRef.current.raycaster.ray.direction.copy(dir.negate().normalize())
+    if (faceControlsRef.current && gui.raycaster === 'own') {
+      const { target } = faceControlsRef.current
+      target.getWorldPosition(pos)
+      target.getWorldDirection(dir)
+      raycasterRef.current.raycaster.ray.origin.copy(pos)
+      raycasterRef.current.raycaster.ray.direction.copy(dir.negate().normalize())
     }
 
     //
@@ -164,15 +161,14 @@ function Scene() {
         </Resize>
       </group>
 
-      <Raycaster
-        ref={raycasterRef}
-        raycaster={raycaster} // pass r3f's raycaster
-        origin={[-4, 1.1, 0.1]}
-        direction={[1, 0, 0]}
-        near={0}
-        far={8}
-        helper={cc && [1]}
-      />
+      {gui.raycaster === 'pointer' ? (
+        <Raycaster
+          ref={raycasterRef}
+          raycaster={raycaster} // pass r3f's raycaster
+        />
+      ) : (
+        <Raycaster ref={raycasterRef} args={[]} near={0} far={8} helper={cc && [1]} />
+      )}
 
       <NormalGroup ref={satelliteRef} hit={hit} altitude={gui.distance}>
         <axesHelper raycast={() => null} scale={0.2} />
@@ -189,7 +185,10 @@ function Scene() {
               offsetScalar={gui.offsetScalar}
               eyes={gui.eyes}
               debug={cc}
-              // facemesh={{ position: [0, 1, 4] }}
+              facemesh={{
+                // position: [0, 1, 4],
+                children: <meshStandardMaterial color="white" wireframe />,
+              }}
             />
           </FaceLandmarker>
         </Suspense>

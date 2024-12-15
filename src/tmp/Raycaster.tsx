@@ -8,22 +8,15 @@ import { RaycasterHelper } from './RaycasterHelper'
 import { useHelper } from './Helper'
 import { Falsey } from 'utility-types'
 
-function toThreeVec3(v: Vector3) {
-  return v instanceof THREE.Vector3 ? v : new THREE.Vector3(...(typeof v === 'number' ? [v, v, v] : v))
-}
-
 type HelperArgs<T> = T extends [any, ...infer R] ? R : never
 
-type RaycasterProps = Partial<THREE.Raycaster> & {
-  /** Origin of the raycaster  */
-  origin: Vector3
-  /** Direction of the raycaster  */
-  direction: Vector3
-} & {
-  raycaster?: THREE.Raycaster
-  /** Whether or not to display the RaycasterHelper - you can pass additional params for the ctor here */
-  helper?: Falsey | HelperArgs<ConstructorParameters<typeof RaycasterHelper>>
-}
+type RaycasterProps = (
+  | { args: ConstructorParameters<typeof THREE.Raycaster>; raycaster?: never }
+  | { args?: never; raycaster: THREE.Raycaster }
+) &
+  Partial<THREE.Raycaster> & {
+    helper?: Falsey | HelperArgs<ConstructorParameters<typeof RaycasterHelper>>
+  }
 
 type RaycasterApi = {
   raycaster: THREE.Raycaster
@@ -34,16 +27,15 @@ type RaycasterApi = {
  * `<raycaster>` wrapper, with a `helper` prop to visualize it
  */
 export const Raycaster = forwardRef<RaycasterApi, RaycasterProps>(
-  ({ raycaster: _raycaster, origin, direction, helper = false, ...props }, fref) => {
-    const [r] = useState(() => new THREE.Raycaster(toThreeVec3(origin), toThreeVec3(direction)))
+  ({ raycaster: _raycaster, args = [], helper = false, ...props }, fref) => {
+    const [r] = useState(() => new THREE.Raycaster(...args))
     const raycaster = _raycaster || r
     window.raycaster = raycaster
 
     const hitsRef = useRef<THREE.Intersection[]>([])
 
     const raycasterRef = useRef<THREE.Raycaster>(null)
-    const args = helper || [20]
-    const raycasterHelperRef = useHelper(helper && raycasterRef, RaycasterHelper, ...args)
+    const raycasterHelperRef = useHelper(helper && raycasterRef, RaycasterHelper, ...(helper || [20]))
 
     // Update the hits with intersection results
     useFrame(({ scene }) => {
